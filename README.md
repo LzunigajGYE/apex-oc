@@ -1,6 +1,6 @@
 # APEX OC
 
-Sistema de gestión de proyectos con IA para **Codex** (Desktop + CLI). Adapter del [APEX Framework](https://github.com/LzunigajGYE/apex-core) para el ecosistema OpenAI.
+Sistema de gestión de proyectos con IA para **Codex** (Desktop + CLI). Adapter del APEX Framework para el ecosistema OpenAI.
 
 Integra APEX Framework (governance y fases), skills propios de brainstorming y planning, y subagentes Codex para guiar cualquier tipo de proyecto a través de fases estructuradas con trazabilidad completa.
 
