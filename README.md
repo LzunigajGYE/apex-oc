@@ -78,17 +78,19 @@ Retomando Fase [N] — [nombre].
 
 ## Skills disponibles
 
-| Skill | Invocación | Descripción |
-|-------|-----------|-------------|
-| Orquestación | `$apex` | Punto de entrada principal |
-| Fase 01 | `$apex-phase-01` | Inicio del proyecto |
-| Fase 02 | `$apex-phase-02` | Investigación de mercado |
-| Fase 03 | `$apex-phase-03` | Estrategia y roadmap |
-| Fase 04 | `$apex-phase-04` | Ejecución (bifurca por tipo) |
-| Fase 04b | `$apex-phase-04b` | Auditoría pre-entrega |
-| Fase 05 | `$apex-phase-05` | Cierre y entregable final |
-| Brainstorming | `$apex-brainstorming` | Diseño pre-implementación |
-| Writing plans | `$apex-writing-plans` | Plan de ejecución detallado |
+| Skill | Invocación | Cuándo usarlo |
+|-------|-----------|--------------|
+| Orquestación | `$apex` | Siempre — punto de entrada. Detecta proyecto nuevo vs existente y ejecuta la fase activa. |
+| Fase 01 | `$apex-phase-01` | Al iniciar un proyecto. Produce `PROJECT.md` y spec de brainstorming aprobada. |
+| Fase 02 | `$apex-phase-02` | Después de aprobar Fase 01. Investiga mercado, competencia y tendencias → `RESEARCH.md`. |
+| Fase 03 | `$apex-phase-03` | Después de aprobar Fase 02. Convierte el research en roadmap y risk register → `STRATEGY.md`. |
+| Fase 04 | `$apex-phase-04` | Después de aprobar Fase 03. Ejecución: bifurca por tipo de proyecto → `SPRINT.md`. |
+| Fase 04b | `$apex-phase-04b` | Después de completar Fase 04. Auditoría antes de entregar — seguridad, calidad, consistencia. |
+| Fase 05 | `$apex-phase-05` | Después de aprobar Fase 04b. Produce el entregable final y cierra el proyecto → `CLOSE.md`. |
+| Brainstorming | `$apex-brainstorming` | En Fase 01, antes de implementar. Diseña y aprueba la spec de una feature o workstream. |
+| Writing plans | `$apex-writing-plans` | En Fase 04, después de aprobar brainstorming. Genera el plan de ejecución con tasks y checkpoints. |
+
+> Detalle completo de cada skill (inputs, outputs, gate de aprobación) en `skills/<nombre>/SKILL.md`.
 
 ---
 
