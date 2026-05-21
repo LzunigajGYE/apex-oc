@@ -133,14 +133,6 @@ apex-oc/
     ├── apex-phase-05/           ← $apex-phase-05
     ├── apex-brainstorming/      ← $apex-brainstorming
     └── apex-writing-plans/      ← $apex-writing-plans
-```
-
----
-
-## Relacionado
-
-- [APEX Core](https://github.com/LzunigajGYE/apex-core) — framework plataforma-agnóstico
-- [APEX CC](https://github.com/LzunigajGYE/apex-cc) — adapter para Claude Code
 
 ---
 
