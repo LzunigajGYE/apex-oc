@@ -49,7 +49,45 @@ Esperar respuesta completa de cada grupo antes de pasar al siguiente.
 
 Luego arrancar directamente **Fase 01** (ver `core/phases/01-inicio.md`).
 
-> **Nota — módulo de tiempo en Codex:** Codex no tiene mecanismo de scheduling en background equivalente a `CronCreate`. Las ventanas de comportamiento (DAY_START, WIND_DOWN) se activan de forma **reactiva** — APEX las evalúa cada vez que el PM invoca `$apex`. No hay tareas background que se disparen solas.
+### Configurar tareas background (Codex Automations)
+
+Codex Automations son objetos de UI — APEX no puede crearlas programáticamente. Al completar MODO NUEVO, si `timeTracking.enabled: true`, **instruir al PM** para configurarlas manualmente en la app:
+
+**Tarea 1 — DAY_START**
+```
+Nombre:   APEX DAY_START — [nombre del proyecto]
+Schedule: cron "3 9 * * [workDays]"   // ej: "1-5" lunes-viernes
+Sandbox:  workspace-write
+Prompt:   "APEX DAY_START — proyecto: [/path/absoluto].
+           Leer apex.config.json. Si timeTracking.enabled y status != 'closed':
+           1. Registrar DAY_START en apex-time.log
+           2. Mostrar fase activa, último item de inProgress, tareas pendientes"
+```
+
+**Tarea 2 — WIND_DOWN**
+```
+Nombre:   APEX WIND_DOWN — [nombre del proyecto]
+Schedule: cron "33 16 * * [workDays]"
+Sandbox:  workspace-write
+Prompt:   "APEX WIND_DOWN — proyecto: [/path/absoluto].
+           Leer apex.config.json. Si timeTracking.enabled y windowAlertedAt != hoy y status != 'closed':
+           1. Avisar: 'Quedan ~90 min de jornada. ¿Qué queremos cerrar hoy?'
+           2. Registrar WINDOW_ALERT en apex-time.log
+           3. Actualizar windowAlertedAt en apex.config.json"
+```
+
+Al confirmar que el PM las configuró, crear `.apex/automations.json` en la raíz del proyecto:
+```json
+{
+  "configured": true,
+  "configuredAt": "[timestamp]",
+  "tasks": ["DAY_START", "WIND_DOWN"]
+}
+```
+
+**MODO RETOMAR:** verificar si `.apex/automations.json` existe. Si no → volver a instruir al PM para configurarlas.
+
+> **Limitación vs apex-cc:** APEX OC no puede crear ni verificar automations programáticamente. El PM debe configurarlas en el app de Codex. Si usa Codex CLI (sin app), las ventanas de tiempo son **reactivas** — se evalúan solo cuando invoca `$apex`.
 
 ---
 
