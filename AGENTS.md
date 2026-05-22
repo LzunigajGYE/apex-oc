@@ -159,6 +159,8 @@ En progreso: [último item de inProgress]
 
 ## Memoria — cuándo y qué escribir
 
+> **Fuente de verdad única:** Cada archivo `core/phases/0X-*.md` documenta qué observaciones recopilar al cerrar esa fase. APEX OC es el único responsable de **escribir** esas observaciones en memoria — las fases solo especifican qué capturar, nunca escriben directamente. Esto evita duplicaciones y sobrescrituras.
+
 APEX OC mantiene dos archivos en `~/.codex/apex/` (fuera del skill — sobrevive reinstalaciones):
 
 ### `~/.codex/apex/pm-profile.md`
