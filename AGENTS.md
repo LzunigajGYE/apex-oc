@@ -209,6 +209,7 @@ TZ=[workCalendar.timezone] date +"%H:%M"
 
 **Reglas anti-spam:**
 - Solo **una alerta por ventana por día** — usar `windowAlertedAt` en `apex.config.json`
+- `windowAlertedAt` lo actualiza APEX OC directamente al escribir en `apex.config.json` — no depende de la Automation de Codex para este campo
 - Si `timeTracking.enabled: false` → sin registros, sin alertas
 
 ### Deadline de sesión
@@ -242,6 +243,36 @@ APEX monitorea decisiones registradas en `apex-time.log` (tipo `DECISION`). Si e
 | Fase 05 — Cierre | `$apex-phase-05` | `core/phases/05-cierre.md` |
 | Brainstorming | `$apex-brainstorming` | `/brainstorming` (Superpowers) |
 | Writing plans | `$apex-writing-plans` | `/writing-plans` (Superpowers) |
+
+---
+
+## Equivalencias apex-cc → apex-oc
+
+| En apex-cc | En apex-oc | Notas |
+|-----------|-----------|-------|
+| `caveman:cavecrew-builder` | Subagente Codex tipo Worker | Edits quirúrgicos, mismo scope |
+| `caveman:cavecrew-investigator` | Subagente Codex tipo Explorer | Búsqueda y mapeo de codebase |
+| `caveman:cavecrew-reviewer` | Subagente Codex tipo Worker (review mode) | Review de diffs antes de merge |
+| `/brainstorming` (Superpowers) | `$apex-brainstorming` | Skill propio — mismo flujo, sin hard-gate externo |
+| `/writing-plans` (Superpowers) | `$apex-writing-plans` | Skill propio |
+| `/using-git-worktrees` (Superpowers) | Worktrees nativos del app Codex | Más integrado — disponible desde la UI |
+| `CronCreate` | Codex Automations (UI) | Ver sección "Configurar tareas background" |
+| `CronList` | `.apex/automations.json` (sidecar) | Codex no expone API de automations |
+
+---
+
+## Sustitución de placeholders
+
+Los archivos de `core/phases/` usan placeholders entre corchetes. Al ejecutar cada fase, APEX OC los sustituye automáticamente con datos del proyecto:
+
+| Placeholder | Fuente |
+|-------------|--------|
+| `[nombre del proyecto]` | `apex.config.json → project` |
+| `[/path/absoluto]` | directorio de trabajo actual (`pwd`) |
+| `[workDays]` | `apex.config.json → workCalendar.workDays` en formato cron (ej: `1-5`) |
+| `[timezone]` | `apex.config.json → workCalendar.timezone` |
+| `[timestamp]` | ISO 8601 del momento actual |
+| `[fecha]` | fecha local formateada (`YYYY-MM-DD`) |
 
 ---
 
