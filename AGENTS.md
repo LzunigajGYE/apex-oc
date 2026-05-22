@@ -125,8 +125,11 @@ Cuando no existe `apex.config.json` pero sí hay documentos del proyecto:
    - Si hay conflictos → recomendar supresión: agregar nota en `AGENTS.md` del proyecto indicando que APEX es el orquestador activo
    - Si PM aprueba → escribir nota de supresión en `AGENTS.md` del proyecto
    - Marcar `environmentAuditDone: true` en `apex.config.json`
-3. Leer `pm-profile.md` → adaptar tono y nivel de detalle
-4. Resumir con contexto:
+3. **[Si `timeTracking.enabled: true`] Verificar automations:** comprobar si `.apex/automations.json` existe en la raíz del proyecto
+   - Si **no existe** → avisar al PM: _"Las automations de tiempo no están configuradas. ¿Las configuramos ahora?"_ y mostrar instrucciones de la sección "Configurar tareas background"
+   - Si **existe** → continuar sin acción
+4. Leer `pm-profile.md` → adaptar tono y nivel de detalle
+5. Resumir con contexto:
 
 ```
 Retomando Fase [N] — [nombre].
@@ -136,7 +139,7 @@ En progreso: [último item de inProgress]
 ¿Continuamos desde aquí?
 ```
 
-5. Ejecutar la fase activa cargando su archivo `core/phases/0X-*.md`
+6. Ejecutar la fase activa cargando su archivo `core/phases/0X-*.md`
 
 ---
 
@@ -273,6 +276,12 @@ Los archivos de `core/phases/` usan placeholders entre corchetes. Al ejecutar ca
 | `[timezone]` | `apex.config.json → workCalendar.timezone` |
 | `[timestamp]` | ISO 8601 del momento actual |
 | `[fecha]` | fecha local formateada (`YYYY-MM-DD`) |
+
+**Sanitización obligatoria antes de interpolar en prompts de Codex Automations:**
+
+Los valores de `project` y `pwd` deben sanearse antes de insertarse en cualquier prompt de automation. Caracteres a eliminar/escapar: `"` `'` `` ` `` `\n` `\r` `;` `(` `)` `|` `&` `$` `>` `<`
+
+Si la sanitización produce un string vacío o inválido → usar `"proyecto-apex"` y `"/tmp/apex-unknown"` como fallback y avisar al PM.
 
 ---
 
