@@ -8,13 +8,17 @@ Invocar con: `$apex`
 
 ## Flujo de inicio (cada invocación de $apex)
 
-1. Leer `~/.codex/apex/pm-profile.md` — si existe, cargar perfil del PM
-2. Leer `~/.codex/apex/patterns.md` — si existe, cargar patrones cross-proyecto
-3. Buscar `apex.config.json` en el directorio actual:
+1. Verificar si `~/.codex/apex/` existe:
+   - Si **no existe** → crear directorio + copiar `core/memory/pm-profile.md` y `core/memory/patterns.md` como base vacía
+2. Leer `~/.codex/apex/pm-profile.md` — si existe, cargar perfil del PM
+3. Leer `~/.codex/apex/patterns.md` — si existe, cargar patrones cross-proyecto
+4. Leer la hora actual: `TZ=[timezone_del_proyecto] date +"%H:%M"` (o `America/Guayaquil` si no hay config aún)
+   - Registrar en `apex-time.log` si el proyecto ya tiene uno
+5. Buscar `apex.config.json` en el directorio actual:
    - **Existe** → **MODO RETOMAR**: leer `currentPhase` → ejecutar fase activa
-   - **No existe** → **MODO NUEVO**: ejecutar entrevista → crear docs base → iniciar Fase 01
-4. Ejecutar la fase activa (ver `core/phases/0X-*.md`)
-5. Al cerrar la sesión → escribir aprendizajes a memoria global
+   - **No existe pero hay PROJECT.md / RESEARCH.md / STRATEGY.md** → **MODO RECUPERACIÓN** (ver abajo)
+   - **No existe y directorio vacío** → **MODO NUEVO**: ejecutar entrevista → crear docs base → iniciar Fase 01
+6. Ejecutar la fase activa (ver `core/phases/0X-*.md`)
 
 ---
 
@@ -44,6 +48,26 @@ Esperar respuesta completa de cada grupo antes de pasar al siguiente.
 - `LOG.md` — usar `core/templates/LOG.md`
 
 Luego arrancar directamente **Fase 01** (ver `core/phases/01-inicio.md`).
+
+---
+
+## MODO RECUPERACIÓN
+
+Cuando no existe `apex.config.json` pero sí hay documentos del proyecto:
+
+1. Informar al PM: _"No encontré `apex.config.json`. El proyecto parece existente — intento reconstruir el estado."_
+2. Inferir fase actual según documentos presentes:
+   - Solo `PROJECT.md` → Fase 02 (investigación pendiente)
+   - `PROJECT.md` + `RESEARCH.md` → Fase 03 (estrategia pendiente)
+   - `PROJECT.md` + `RESEARCH.md` + `STRATEGY.md` → Fase 04 (ejecución pendiente)
+   - `PROJECT.md` + `SPRINT.md` → Fase 04b (auditoría pendiente)
+3. Mostrar estado inferido al PM y pedir confirmación
+4. Si PM confirma → regenerar `apex.config.json` con la fase inferida y datos extraídos de los docs
+5. Si PM rechaza → pedir que indique la fase correcta manualmente
+
+**Si `apex.config.json` existe pero está malformado** (JSON inválido o faltan campos clave):
+- Avisar: _"El archivo `apex.config.json` parece dañado. ¿Quieres que intente repararlo o prefieres corregirlo manualmente?"_
+- No continuar hasta que el archivo sea válido.
 
 ---
 
@@ -92,18 +116,76 @@ En progreso: [último item de inProgress]
 
 ## Memoria — cuándo y qué escribir
 
-APEX OC mantiene dos archivos en `~/.codex/apex/`:
+APEX OC mantiene dos archivos en `~/.codex/apex/` (fuera del skill — sobrevive reinstalaciones):
 
-### `pm-profile.md`
-Actualizar **al final de cada sesión** con observaciones sobre velocidad de decisión, nivel de detalle solicitado, frecuencia de aceptación de recomendaciones y preguntas recurrentes.
+### `~/.codex/apex/pm-profile.md`
+Actualizar **al cerrar cada fase** con observaciones sobre velocidad de decisión, nivel de detalle solicitado, frecuencia de aceptación de recomendaciones y preguntas recurrentes.
 
-### `patterns.md`
+### `~/.codex/apex/patterns.md`
 Actualizar **al cerrar cada fase** con agentes útiles, documentos más iterados y decisiones comunes por tipo de proyecto.
 
 **Regla de patrón confirmado**: si un comportamiento ocurre 3+ veces en proyectos distintos → registrarlo explícitamente.
 
 ### `apex.config.json` del proyecto
-Actualizar al cierre de cada fase: mover fase a `completedPhases`, actualizar `currentPhase`, registrar aprobación en `approvals`, actualizar `lastRun`.
+Actualizar al cierre de cada fase:
+- Mover fase a `completedPhases`
+- Actualizar `currentPhase` a la siguiente
+- Registrar `phases.[fase-actual].closedAt` con timestamp
+- Registrar aprobación en `approvals`
+- Actualizar `lastRun`
+
+---
+
+## Regla de fase
+
+**Una fase por sesión.** Al completar el gate de una fase:
+1. Actualizar `apex.config.json` (ver Memoria arriba)
+2. Escribir aprendizajes en `~/.codex/apex/pm-profile.md` y `~/.codex/apex/patterns.md`
+3. Registrar `PHASE_END` en `apex-time.log`
+4. Informar al PM que la fase cerró — **no iniciar la siguiente fase en la misma sesión**
+
+---
+
+## Módulo de tiempo
+
+Activo cuando `timeTracking.enabled: true` en `apex.config.json` (valor por defecto).
+
+### Cómo leer la hora
+
+```bash
+TZ=[workCalendar.timezone] date +"%H:%M"
+```
+
+### Ventanas de comportamiento
+
+| Hora | Evento | Acción de APEX OC |
+|------|--------|------------------|
+| 09:00 | DAY_START | Saludar al PM, mostrar fase activa + tareas pendientes. Registrar `DAY_START` en `apex-time.log`. |
+| 12:00–13:30 | MIDDAY | Si PM inicia sesión en este rango → mencionar brevemente. Sin bloquear. |
+| 16:30 | WIND_DOWN | Avisar: _"Quedan ~90 min de jornada. ¿Qué queremos cerrar hoy?"_ Una sola vez por día. |
+| 18:00 | END_OF_HOURS | Si hay gate abierto → recordar al PM antes de cerrar. Registrar `WINDOW_ALERT` en log. |
+| 20:00 | NIGHT_START | Registrar `OUT_OF_HOURS` en log **silenciosamente**. Sin alerta al PM. |
+| 23:00+ | LATE | Registrar `OUT_OF_HOURS` en log silenciosamente. Sin alerta. |
+
+**Reglas anti-spam:**
+- Solo **una alerta por ventana por día** — usar `windowAlertedAt` en `apex.config.json`
+- Si `timeTracking.enabled: false` → sin registros, sin alertas
+
+### Deadline de sesión
+
+Si `timeTracking.sessionDeadline` está definido (ISO timestamp):
+- **30 min antes**: _"En 30 minutos termina tu sesión programada. ¿Cerramos la fase o dejamos checkpoint?"_
+- **15 min antes**: _"Quedan 15 minutos."_
+- Solo 2 alertas en total por deadline
+
+Desactivar para una sesión: `$apex time off`
+
+### Radar de decisiones
+
+APEX monitorea decisiones registradas en `apex-time.log` (tipo `DECISION`). Si en la sesión actual hay 3+ decisiones sin revisión:
+- **Una sola alerta por sesión**: _"Llevamos [N] decisiones tomadas en esta sesión. ¿Las revisamos antes de continuar?"_
+- Usar `timeTracking.radarAlertedAt` para no repetir la alerta
+- Escribir silenciosamente en log si el PM responde "no ahora"
 
 ---
 
