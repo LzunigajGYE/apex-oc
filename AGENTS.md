@@ -49,6 +49,8 @@ Esperar respuesta completa de cada grupo antes de pasar al siguiente.
 
 Luego arrancar directamente **Fase 01** (ver `core/phases/01-inicio.md`).
 
+> **Nota — módulo de tiempo en Codex:** Codex no tiene mecanismo de scheduling en background equivalente a `CronCreate`. Las ventanas de comportamiento (DAY_START, WIND_DOWN) se activan de forma **reactiva** — APEX las evalúa cada vez que el PM invoca `$apex`. No hay tareas background que se disparen solas.
+
 ---
 
 ## MODO RECUPERACIÓN
