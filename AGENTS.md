@@ -126,7 +126,7 @@ Cuando no existe `apex.config.json` pero sí hay documentos del proyecto:
    - Si PM aprueba → escribir nota de supresión en `AGENTS.md` del proyecto
    - Marcar `environmentAuditDone: true` en `apex.config.json`
 3. **[Si `ragEnabled: true`] Consulta RAG inicial:**
-   - Llamar `rag_query("contexto del proyecto [nombre del proyecto]")` con `project=[project]`
+   - Llamar `rag_query({ query: "contexto del proyecto [nombre del proyecto]", project: "[project]" })`
    - Usar los chunks retornados como contexto semántico inicial de la sesión
    - Reduce la necesidad de leer todos los docs del proyecto al arrancar
    - Si MCP `apex-rag` no responde → loguear fallo silenciosamente en `apex-time.log` y continuar sin RAG (no bloquea)
@@ -193,8 +193,8 @@ Actualizar al cierre de cada fase:
 2. Escribir aprendizajes en `~/.codex/apex/pm-profile.md` y `~/.codex/apex/patterns.md`
 3. Registrar `PHASE_END` en `apex-time.log`
 4. **[Si `ragEnabled: true`] Indexar docs de la fase en RAG:**
-   - Llamar `rag_index` con los documentos generados/modificados en esta fase
-   - Metadata: `{ project: [project], phase: [fase-actual], tipo_doc: [tipo] }`
+   - Llamar `rag_index({ project: "[project]", phase: "[fase-actual]", documents: [...] })`
+   - Metadata por documento: `{ tipo: "[TIPO_DOC]" }` (ej: `PROJECT`, `RESEARCH`, `STRATEGY`, `SPRINT`, `CLOSE`)
    - Si MCP `apex-rag` no responde → loguear fallo en `apex-time.log` y continuar (no bloquea el cierre)
 5. Informar al PM que la fase cerró — **no iniciar la siguiente fase en la misma sesión**
 
@@ -270,6 +270,7 @@ El PM activa el RAG al inicio de un proyecto editando `apex.config.json`, o APEX
 | Fase 03 — Estrategia | `"decisiones y riesgos en proyectos [type]"` — sin filtro de proyecto |
 | Fase 04 — Ejecución | `"stack y bloqueos en proyectos similares"` — sin filtro de proyecto |
 | Fase 05 — Cierre | `"lecciones aprendidas en proyectos [type]"` — sin filtro de proyecto |
+| Radar de decisiones | `"decisiones sin revisar en [nombre]"` — project=[project] |
 
 ### Docs a indexar por fase
 
