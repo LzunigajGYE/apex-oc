@@ -113,7 +113,7 @@ Cuando no existe `apex.config.json` pero sí hay documentos del proyecto:
 
 ## MODO RETOMAR
 
-1. Leer `apex.config.json` → extraer `currentPhase`, `inProgress`, `completedPhases`, `environmentAuditDone`
+1. Leer `apex.config.json` → extraer `currentPhase`, `inProgress`, `completedPhases`, `environmentAuditDone`, `ragEnabled`
 2. **[Si `environmentAuditDone: false`] Auditoría de entorno** — solo la primera vez que APEX entra a un proyecto existente:
    - Escanear `AGENTS.md` del proyecto buscando skills de orquestación/PM activos
    - Escanear `.codex/config.toml` local (si existe) buscando hooks que interfieran con el flujo de fases
@@ -125,11 +125,16 @@ Cuando no existe `apex.config.json` pero sí hay documentos del proyecto:
    - Si hay conflictos → recomendar supresión: agregar nota en `AGENTS.md` del proyecto indicando que APEX es el orquestador activo
    - Si PM aprueba → escribir nota de supresión en `AGENTS.md` del proyecto
    - Marcar `environmentAuditDone: true` en `apex.config.json`
-3. **[Si `timeTracking.enabled: true`] Verificar automations:** comprobar si `.apex/automations.json` existe en la raíz del proyecto
+3. **[Si `ragEnabled: true`] Consulta RAG inicial:**
+   - Llamar `rag_query("contexto del proyecto [nombre del proyecto]")` con `project=[project]`
+   - Usar los chunks retornados como contexto semántico inicial de la sesión
+   - Reduce la necesidad de leer todos los docs del proyecto al arrancar
+   - Si MCP `apex-rag` no responde → loguear fallo silenciosamente en `apex-time.log` y continuar sin RAG (no bloquea)
+4. **[Si `timeTracking.enabled: true`] Verificar automations:** comprobar si `.apex/automations.json` existe en la raíz del proyecto
    - Si **no existe** → avisar al PM: _"Las automations de tiempo no están configuradas. ¿Las configuramos ahora?"_ y mostrar instrucciones de la sección "Configurar tareas background"
    - Si **existe** → continuar sin acción
-4. Leer `pm-profile.md` → adaptar tono y nivel de detalle
-5. Resumir con contexto:
+5. Leer `pm-profile.md` → adaptar tono y nivel de detalle
+6. Resumir con contexto:
 
 ```
 Retomando Fase [N] — [nombre].
@@ -139,7 +144,7 @@ En progreso: [último item de inProgress]
 ¿Continuamos desde aquí?
 ```
 
-6. Ejecutar la fase activa cargando su archivo `core/phases/0X-*.md`
+7. Ejecutar la fase activa cargando su archivo `core/phases/0X-*.md`
 
 ---
 
@@ -187,7 +192,11 @@ Actualizar al cierre de cada fase:
 1. Actualizar `apex.config.json` (ver Memoria arriba)
 2. Escribir aprendizajes en `~/.codex/apex/pm-profile.md` y `~/.codex/apex/patterns.md`
 3. Registrar `PHASE_END` en `apex-time.log`
-4. Informar al PM que la fase cerró — **no iniciar la siguiente fase en la misma sesión**
+4. **[Si `ragEnabled: true`] Indexar docs de la fase en RAG:**
+   - Llamar `rag_index` con los documentos generados/modificados en esta fase
+   - Metadata: `{ project: [project], phase: [fase-actual], tipo_doc: [tipo] }`
+   - Si MCP `apex-rag` no responde → loguear fallo en `apex-time.log` y continuar (no bloquea el cierre)
+5. Informar al PM que la fase cerró — **no iniciar la siguiente fase en la misma sesión**
 
 ---
 
@@ -232,6 +241,54 @@ APEX monitorea decisiones registradas en `apex-time.log` (tipo `DECISION`). Si e
 - **Una sola alerta por sesión**: _"Llevamos [N] decisiones tomadas en esta sesión. ¿Las revisamos antes de continuar?"_
 - Usar `timeTracking.radarAlertedAt` para no repetir la alerta
 - Escribir silenciosamente en log si el PM responde "no ahora"
+
+---
+
+## Módulo RAG
+
+Activo cuando `ragEnabled: true` en `apex.config.json`. **Opt-in explícito** — `false` por defecto.
+
+El PM activa el RAG al inicio de un proyecto editando `apex.config.json`, o APEX OC puede preguntar al crear el proyecto:
+> _"¿Quieres activar memoria semántica RAG para este proyecto? Requiere conexión al servidor `apex-rag`."_
+
+> **Limitación vs apex-cc:** En Codex, el MCP `apex-rag` debe configurarse manualmente en el entorno Codex (no via Claude Code settings). Si no está disponible, APEX OC opera normalmente sin RAG.
+
+### Herramientas disponibles (MCP `apex-rag`)
+
+| Herramienta | Cuándo | Qué hace |
+|-------------|--------|----------|
+| `rag_query` | MODO RETOMAR (inicio de sesión) | Recupera contexto semántico del proyecto sin leer todos los archivos |
+| `rag_query` | Fase 03, 04, 05 | Consulta patrones cross-proyecto (decisiones, riesgos, stack) |
+| `rag_index` | Al cerrar cada fase | Indexa los docs generados en esa fase |
+| `rag_delete` | Al cerrar proyecto (Fase 05) | Opcional — limpiar índice si el PM lo solicita |
+
+### Queries por momento
+
+| Momento | Query sugerida |
+|---------|----------------|
+| MODO RETOMAR | `"contexto del proyecto [nombre]"` — project=[project] |
+| Fase 03 — Estrategia | `"decisiones y riesgos en proyectos [type]"` — sin filtro de proyecto |
+| Fase 04 — Ejecución | `"stack y bloqueos en proyectos similares"` — sin filtro de proyecto |
+| Fase 05 — Cierre | `"lecciones aprendidas en proyectos [type]"` — sin filtro de proyecto |
+
+### Docs a indexar por fase
+
+| Fase | Documentos |
+|------|-----------|
+| 01 — Inicio | `PROJECT.md`, `TEAM.md` |
+| 02 — Investigación | `RESEARCH.md` |
+| 03 — Estrategia | `STRATEGY.md` |
+| 04 — Ejecución | `SPRINT.md` |
+| 05 — Cierre | `CLOSE.md` |
+| Cualquier fase | Entradas `DECISION` de `apex-time.log` de esa fase |
+
+### Comportamiento ante fallo
+
+Si `apex-rag` no responde en cualquier llamada:
+- No bloquear ni alertar al PM
+- Registrar en `apex-time.log`: `RAG_FAIL | tool=[herramienta] | reason=[error]`
+- Continuar el flujo normal (APEX OC opera sin RAG)
+- No reintentar en la misma sesión
 
 ---
 
